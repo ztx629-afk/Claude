@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sleep Science Quiz | Zentra</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:   #556095;
+      --blue-dark: #3e4a75;
+      --blue-light: #eef0f7;
+      --green:  #478244;
+      --green-light: #eef5ee;
+      --black:  #111111;
+      --grey:   #5a6270;
+      --border: #dde0ea;
+      --bg:     #f5f6fa;
+      --white:  #ffffff;
+    }
+
+    body {
+      font-family: 'Assistant', sans-serif;
+      background: var(--bg);
+      color: var(--black);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      padding: 16px 20px;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: -0.3px;
+    }
+    .logo span { color: var(--green); }
+
+    /* ── Main wrap ── */
+    main {
+      width: 100%;
+      max-width: 620px;
+      padding: 36px 20px 60px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--white);
+      border-radius: 18px;
+      padding: 40px 36px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.07);
+    }
+
+    /* ── Progress ── */
+    .progress-wrap { margin-bottom: 32px; }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--grey);
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      height: 5px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    /* ── Fact callout ── */
+    .fact-box {
+      background: var(--blue-light);
+      border-left: 4px solid var(--blue);
+      border-radius: 0 10px 10px 0;
+      padding: 14px 16px;
+      margin-bottom: 28px;
+      font-size: 14px;
+      color: #2d3457;
+      line-height: 1.65;
+    }
+    .fact-box strong {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--blue);
+      margin-bottom: 5px;
+    }
+
+    /* ── Step tag ── */
+    .step-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--blue);
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--black);
+      line-height: 1.35;
+      margin-bottom: 8px;
+    }
+    .sub {
+      font-size: 14px;
+      color: var(--grey);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* ── Options ── */
+    .options { display: flex; flex-direction: column; gap: 10px; }
+
+    .option {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      cursor: pointer;
+      font-family: 'Assistant', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--black);
+      background: var(--white);
+      text-align: left;
+      transition: border-color 0.18s, background 0.18s;
+      line-height: 1.4;
+    }
+    .option:hover  { border-color: var(--blue); background: var(--blue-light); }
+    .option.selected { border-color: var(--blue); background: var(--blue-light); color: var(--blue-dark); }
+
+    /* ── Buttons ── */
+    .btn {
+      margin-top: 24px;
+      width: 100%;
+      padding: 15px;
+      background: var(--blue);
+      color: var(--white);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .btn:hover    { background: var(--blue-dark); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── Steps ── */
+    .question-step         { display: none; }
+    .question-step.active  { display: block; }
+
+    /* ── Intro ── */
+    #intro { text-align: center; }
+    #intro .pill {
+      display: inline-block;
+      background: var(--green-light);
+      color: var(--green);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    #intro h1 {
+      font-size: 27px;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 14px;
+    }
+    #intro p {
+      font-size: 15px;
+      color: var(--grey);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+    #intro .meta {
+      font-size: 13px;
+      color: #aab0c0;
+      margin: 18px 0 26px;
+    }
+    #intro .meta span { margin: 0 6px; }
+
+    /* ── Doctor badge ── */
+    .doctor-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--blue-light);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .doctor-badge .icon { font-size: 28px; flex-shrink: 0; }
+    .doctor-badge p {
+      font-size: 13px;
+      color: #2d3457;
+      line-height: 1.55;
+      margin: 0;
+    }
+    .doctor-badge p strong { color: var(--blue-dark); }
+
+    /* ── Results ── */
+    #results { display: none; }
+
+    .result-header { text-align: center; margin-bottom: 30px; }
+    .result-header .tick { font-size: 42px; margin-bottom: 10px; }
+    .result-header h2   { font-size: 23px; margin-bottom: 8px; }
+    .result-header p    { font-size: 14px; color: var(--grey); line-height: 1.65; }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--blue);
+      margin: 28px 0 14px;
+    }
+
+    .insight {
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      font-size: 15px;
+      color: #2a2f3e;
+      line-height: 1.7;
+    }
+    .insight strong { color: var(--black); }
+    .stat-badge {
+      display: inline-block;
+      background: var(--blue);
+      color: var(--white);
+      border-radius: 6px;
+      padding: 1px 8px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* ── Ingredients ── */
+    .ingredients { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+    .ingr {
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .ingr .name {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--black);
+      margin-bottom: 3px;
+    }
+    .ingr .desc {
+      font-size: 14px;
+      color: var(--grey);
+      line-height: 1.6;
+    }
+    .ingr .desc em {
+      font-style: normal;
+      font-weight: 700;
+      color: var(--blue-dark);
+    }
+
+    /* ── Product card ── */
+    .product-card {
+      background: linear-gradient(145deg, #3a4570 0%, #556095 100%);
+      border-radius: 16px;
+      padding: 30px 26px;
+      color: var(--white);
+      margin-top: 30px;
+    }
+    .product-card .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border-radius: 99px;
+      padding: 4px 13px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+    .product-card h3   { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+    .product-card p    { font-size: 14px; color: rgba(255,255,255,0.82); line-height: 1.7; margin-bottom: 18px; }
+    .product-card ul   { list-style: none; margin-bottom: 22px; display: flex; flex-direction: column; gap: 6px; }
+    .product-card ul li { font-size: 14px; color: rgba(255,255,255,0.9); }
+    .product-card ul li::before { content: "✓  "; color: #a8d5a2; font-weight: 800; }
+    .product-card .cta {
+      display: block;
+      background: var(--white);
+      color: var(--blue-dark);
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      font-family: 'Assistant', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      text-decoration: none;
+      transition: opacity 0.18s;
+    }
+    .product-card .cta:hover { opacity: 0.9; }
+
+    /* ── Disclaimer ── */
+    .disclaimer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #a0a8b8;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 28px 18px; }
+      h2    { font-size: 19px; }
+      #intro h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">zen<span>tra</span></div>
+  </header>
+
+  <main>
+    <div class="card">
+
+      <!-- ── INTRO ── -->
+      <div id="intro">
+        <div class="pill">Sleep Education</div>
+        <h1>What's Actually Stopping You From Sleeping?</h1>
+        <p>This short quiz walks you through the science of how your brain produces sleep — and helps you understand what's most likely getting in the way.</p>
+
+        <div class="doctor-badge">
+          <div class="icon">🙋</div>
+          <p><strong>From our sleep doctor:</strong> Most people don't realise there are specific chemical reasons why sleep breaks down. This quiz explains what's happening and what the research says about supporting it naturally.</p>
+        </div>
+
+        <div class="meta">
+          5 questions <span>·</span> ~2 minutes <span>·</span> No sign-up
+        </div>
+
+        <button class="btn" onclick="startQuiz()">Start the Quiz &rarr;</button>
+      </div>
+
+      <!-- ── QUIZ ── -->
+      <div id="quiz" style="display:none;">
+
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span id="progress-label">Question 1 of 5</span>
+            <span id="progress-pct">20%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width:20%"></div>
+          </div>
+        </div>
+
+        <!-- Q1 -->
+        <div class="question-step active" id="q1">
+          <div class="step-tag">Question 1 of 5</div>
+          <h2>How would you describe your main sleep issue?</h2>
+          <p class="sub">Select whichever fits best right now.</p>
+          <div class="options">
+            <button class="option" onclick="select(this,'q1')">I struggle to fall asleep — my mind won't quiet down</button>
+            <button class="option" onclick="select(this,'q1')">I fall asleep fine but keep waking through the night</button>
+            <button class="option" onclick="select(this,'q1')">Both — falling asleep and staying asleep are hard</button>
+            <button class="option" onclick="select(this,'q1')">I sleep but never wake up feeling rested</button>
+          </div>
+          <button class="btn" id="btn1" onclick="next(1)" disabled>Next</button>
+        </div>
+
+        <!-- Q2 -->
+        <div class="question-step" id="q2">
+          <div class="fact-box">
+            <strong>How melatonin actually works</strong>
+            Your brain's pineal gland releases melatonin naturally when it gets dark — signalling the nervous system it's time to wind down. It already knows how to do this. The question is whether it's getting the right support to do so.
+          </div>
+          <div class="step-tag">Question 2 of 5</div>
+          <h2>Have you tried melatonin supplements?</h2>
+          <p class="sub">No right or wrong answer — this helps personalise your results.</p>
+          <div class="options">
+            <button class="option" onclick="select(this,'q2')">Yes — it worked at first but I needed more over time</button>
+            <button class="option" onclick="select(this,'q2')">Yes — it never made a consistent difference</button>
+            <button class="option" onclick="select(this,'q2')">Yes — it still seems to work for me</button>
+            <button class="option" onclick="select(this,'q2')">No, I haven't tried it</button>
+          </div>
+          <button class="btn" id="btn2" onclick="next(2)" disabled>Next</button>
+        </div>
+
+        <!-- Q3 -->
+        <div class="question-step" id="q3">
+          <div class="fact-box">
+            <strong>Natural melatonin & age</strong>
+            Your brain's ability to produce its own melatonin declines with age. It's highest in early childhood. By your 20s it has already dropped by roughly <strong>75%</strong> from its peak. By the mid-70s, levels fall a further <strong>43%</strong> compared to the 20s. This happens independently of any supplement use.
+          </div>
+          <div class="step-tag">Question 3 of 5</div>
+          <h2>What is your age range?</h2>
+          <p class="sub">This affects how your brain's natural melatonin output is functioning.</p>
+          <div class="options">
+            <button class="option" onclick="select(this,'q3')">Under 25</button>
+            <button class="option" onclick="select(this,'q3')">25 – 39</button>
+            <button class="option" onclick="select(this,'q3')">40 – 59</button>
+            <button class="option" onclick="select(this,'q3')">60 or older</button>
+          </div>
+          <button class="btn" id="btn3" onclick="next(3)" disabled>Next</button>
+        </div>
+
+        <!-- Q4 -->
+        <div class="question-step" id="q4">
+          <div class="step-tag">Question 4 of 5</div>
+          <h2>Which of these do you notice before bed?</h2>
+          <p class="sub">Select all that apply, then press Next.</p>
+          <div class="options" id="multi4">
+            <button class="option" onclick="toggle(this)">Racing or repetitive thoughts</button>
+            <button class="option" onclick="toggle(this)">Physical tension or restlessness</button>
+            <button class="option" onclick="toggle(this)">Feeling wired even when I'm tired</button>
+            <button class="option" onclick="toggle(this)">Background anxiety or low-level stress</button>
+            <button class="option" onclick="toggle(this)">None of the above</button>
+          </div>
+          <button class="btn" id="btn4" onclick="next(4)">Next</button>
+        </div>
+
+        <!-- Q5 -->
+        <div class="question-step" id="q5">
+          <div class="fact-box">
+            <strong>Two chemicals that control wakefulness</strong>
+            Glutamate is an excitatory neurotransmitter that keeps the brain active and alert. GABA is the brain's primary calming signal. When GABA is insufficient — or glutamate activity is high — the brain struggles to switch off, regardless of how physically tired you feel.
+          </div>
+          <div class="step-tag">Question 5 of 5</div>
+          <h2>What matters most to you in improving your sleep?</h2>
+          <p class="sub">Choose the one that resonates most right now.</p>
+          <div class="options">
+            <button class="option" onclick="select(this,'q5')">Getting to sleep faster, without grogginess the next day</button>
+            <button class="option" onclick="select(this,'q5')">Sleeping through the night without waking</button>
+            <button class="option" onclick="select(this,'q5')">Reducing reliance on sleep aids over time</button>
+            <button class="option" onclick="select(this,'q5')">Understanding what's actually causing the problem</button>
+          </div>
+          <button class="btn" id="btn5" onclick="showResults()" disabled>See My Results &rarr;</button>
+        </div>
+
+      </div><!-- /quiz -->
+
+      <!-- ── RESULTS ── -->
+      <div id="results">
+
+        <div class="result-header">
+          <div class="tick">🔬</div>
+          <h2>Here's What the Science Says</h2>
+          <p>Based on your answers — here's what's likely happening in your brain, and what the research says actually supports natural sleep chemistry.</p>
+        </div>
+
+        <div class="section-title">Understanding the System</div>
+
+        <div class="insight">
+          <strong>Your brain already knows how to produce sleep.</strong> The pineal gland releases melatonin naturally in response to darkness, signalling the nervous system to slow down. The issue isn't usually a missing ingredient — it's that the system isn't receiving what it needs to function well on its own.
+        </div>
+
+        <div class="insight">
+          When synthetic melatonin is taken regularly, the brain detects the external source and reduces its own output. Over time, the natural trigger for sleep can weaken. This is why the dose often needs to increase — one gummy stops working, then two — and why stopping can feel harder than starting. The dependency shows up months after the review is already written.
+        </div>
+
+        <div class="insight">
+          Natural melatonin production declines with age regardless of supplement use. By your 20s it has dropped roughly <span class="stat-badge">~75%</span> from its childhood peak. By the mid-70s, a further <span class="stat-badge">43%</span> decline occurs compared to the 20s. Taking synthetic melatonin on top of this isn't supplementing a healthy system — it's replacing an already-weakening one, and accelerating that process.
+        </div>
+
+        <div class="section-title">Four Compounds That Work With Your Brain Chemistry</div>
+        <p style="font-size:14px;color:var(--grey);line-height:1.65;margin-bottom:18px;">Rather than replacing melatonin externally, the following compounds support the upstream processes your brain uses to produce sleep on its own.</p>
+
+        <div class="ingredients">
+          <div class="ingr">
+            <div class="name">5-HTP</div>
+            <div class="desc">A naturally occurring amino acid that raises <em>serotonin</em> levels in the brain. Serotonin is a direct precursor to melatonin — the brain converts it naturally. This fuels the system rather than bypassing it.</div>
+          </div>
+          <div class="ingr">
+            <div class="name">Valerian Root</div>
+            <div class="desc">Increases levels of <em>GABA</em> — the brain's primary calming neurotransmitter. Higher GABA activity reduces nervous system arousal, supporting the ability to stay asleep through the night.</div>
+          </div>
+          <div class="ingr">
+            <div class="name">Magnesium Glycinate</div>
+            <div class="desc">Helps block the signals that drive <em>cortisol</em> into the brain at night. Research confirmed it improved insomnia severity in adults with poor sleep quality. Glycinate is one of the more bioavailable forms for this purpose.</div>
+          </div>
+          <div class="ingr">
+            <div class="name">L-Theanine</div>
+            <div class="desc">Inhibits <em>glutamate</em> — the excitatory chemical that keeps the brain in an alert state. By reducing glutamate activity, L-Theanine shortens the time it takes the brain to transition into a sleep-ready state.</div>
+          </div>
+        </div>
+
+        <div class="section-title">What to Look For in a Product</div>
+        <div class="insight">
+          Most sleep gummies rely solely on melatonin because it is inexpensive and produces fast enough results for a five-star review — before any dependency develops. A more supportive approach targets the underlying chemistry: serotonin production, GABA activity, cortisol suppression, and glutamate inhibition, in clinically measured doses, with no synthetic melatonin.
+        </div>
+
+        <div class="product-card">
+          <div class="badge">Recommended by our sleep doctor</div>
+          <h3>Zentra Sleep Gummies</h3>
+          <p>One of the few products that combines all four compounds above in clinically measured doses, with no melatonin. Produced in small batches — availability varies.</p>
+          <ul>
+            <li>No synthetic melatonin — works with your natural system</li>
+            <li>5-HTP, Valerian Root, Magnesium Glycinate &amp; L-Theanine</li>
+            <li>Clinically measured doses</li>
+            <li>Small batch production</li>
+          </ul>
+          <a href="https://tryzentra.store/products/melatonin-free-sleep-gummies" class="cta" target="_blank" rel="noopener">Check Availability on Zentra's Site &rarr;</a>
+        </div>
+
+        <p class="disclaimer">This quiz is for informational purposes only and does not constitute medical advice. The statistics referenced are based on published research into natural melatonin decline with age. If you have a diagnosed sleep disorder, consult a healthcare professional.</p>
+
+      </div><!-- /results -->
+
+    </div><!-- /card -->
+  </main>
+
+  <script>
+    const answers = {};
+
+    function startQuiz() {
+      document.getElementById('intro').style.display = 'none';
+      document.getElementById('quiz').style.display = 'block';
+    }
+
+    function select(btn, qid) {
+      btn.closest('.options').querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+      btn.classList.add('selected');
+      answers[qid] = btn.textContent.trim();
+      const num = qid.replace('q', '');
+      const nextBtn = document.getElementById('btn' + num);
+      if (nextBtn) nextBtn.disabled = false;
+    }
+
+    function toggle(btn) {
+      btn.classList.toggle('selected');
+    }
+
+    function next(current) {
+      document.getElementById('q' + current).classList.remove('active');
+      document.getElementById('q' + (current + 1)).classList.add('active');
+      const pct = ((current + 1) / 5) * 100;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-label').textContent = 'Question ' + (current + 1) + ' of 5';
+      document.getElementById('progress-pct').textContent = Math.round(pct) + '%';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showResults() {
+      document.getElementById('quiz').style.display = 'none';
+      document.getElementById('results').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+
+</body>
+</html>
