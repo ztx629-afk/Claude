@@ -40,15 +40,61 @@
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: center;
-      padding: 16px 20px;
+      align-items: center;
+      padding: 14px 20px;
     }
     .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
       font-size: 22px;
       font-weight: 800;
       color: var(--blue);
       letter-spacing: -0.3px;
+      text-decoration: none;
     }
     .logo span { color: var(--green); }
+    .logo svg  { flex-shrink: 0; }
+
+    /* ── Loading screen ── */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 20px 0 10px;
+    }
+    .spinner-wrap { margin-bottom: 22px; }
+    .spinner {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto;
+      border-radius: 50%;
+      border: 5px solid var(--blue-light);
+      border-top-color: var(--blue);
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--blue-dark);
+      margin-bottom: 8px;
+    }
+    #loading p {
+      font-size: 14px;
+      color: var(--grey);
+      line-height: 1.6;
+    }
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.4s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+      100% { content: ''; }
+    }
 
     /* ── Main wrap ── */
     main {
@@ -344,7 +390,17 @@
 <body>
 
   <header>
-    <div class="logo">zen<span>tra</span></div>
+    <a class="logo" href="#">
+      <!-- Moon + star icon in brand purple/blue -->
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Crescent moon -->
+        <path d="M27 17.5C27 23.299 22.299 28 16.5 28C10.701 28 6 23.299 6 17.5C6 11.701 10.701 7 16.5 7C14.2 9.1 12.8 12.1 12.8 15.4C12.8 21.4 17.6 26.2 23.6 26.2C24.8 26.2 25.9 26 27 25.6C27 26.2 27 16.9 27 17.5Z" fill="#556095"/>
+        <path d="M26 16C26 21.523 21.523 26 16 26C10.477 26 6 21.523 6 16C6 10.477 10.477 6 16 6C13.9 8 12.6 10.8 12.6 13.9C12.6 19.5 17.1 24 22.7 24C23.8 24 24.9 23.8 25.9 23.4C26 20.9 26 16 26 16Z" fill="#3e4a75"/>
+        <!-- Star -->
+        <path d="M22 10L22.7 12.1L25 12.1L23.1 13.5L23.8 15.6L22 14.2L20.2 15.6L20.9 13.5L19 12.1L21.3 12.1Z" fill="#a0aad4"/>
+      </svg>
+      zen<span>tra</span>
+    </a>
   </header>
 
   <main>
@@ -466,6 +522,15 @@
 
       </div><!-- /quiz -->
 
+      <!-- ── LOADING ── -->
+      <div id="loading">
+        <div class="spinner-wrap">
+          <div class="spinner"></div>
+        </div>
+        <h3>Analysing your results<span class="loading-dots"></span></h3>
+        <p>Matching your answers to the sleep science.</p>
+      </div>
+
       <!-- ── RESULTS ── -->
       <div id="results">
 
@@ -569,8 +634,13 @@
 
     function showResults() {
       document.getElementById('quiz').style.display = 'none';
-      document.getElementById('results').style.display = 'block';
+      document.getElementById('loading').style.display = 'block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(function () {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 2800);
     }
   </script>
 
