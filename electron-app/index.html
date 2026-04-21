@@ -726,31 +726,36 @@
 
   function openApp(app) {
     showScreen(app + '-screen');
-    if (app === 'facebook') initFacebook();
+    if (app === 'facebook' && fbLoaded) {
+      document.getElementById('fb-loading').classList.add('hidden');
+    }
   }
 
   function goHome() {
     if (currentScreen !== 'home-screen' && currentScreen !== 'lock-screen') showScreen('home-screen');
   }
 
-  // ── Facebook webview ──
-  function initFacebook() {
+  // ── Facebook webview — preload immediately on app start ──
+  function preloadFacebook() {
     const wv = document.getElementById('fb-webview');
     const loading = document.getElementById('fb-loading');
-
-    if (!fbLoaded) {
-      loading.classList.remove('hidden');
-      wv.addEventListener('did-finish-load', () => {
-        loading.classList.add('hidden');
-        fbLoaded = true;
-      }, { once: true });
-      wv.addEventListener('did-fail-load', () => {
+    wv.addEventListener('did-finish-load', () => {
+      fbLoaded = true;
+      // If already on Facebook screen, hide the spinner right away
+      if (currentScreen === 'facebook-screen') loading.classList.add('hidden');
+    }, { once: true });
+    wv.addEventListener('did-fail-load', () => {
+      fbLoaded = false;
+      if (currentScreen === 'facebook-screen') {
         loading.innerHTML = '<div style="font-size:40px;">📵</div><div style="font-size:15px;color:#65676b;">Could not connect.<br>Check your internet.</div>';
-      }, { once: true });
-    } else {
-      loading.classList.add('hidden');
-    }
+      }
+    }, { once: true });
+    // Trigger load by setting src (webview is already in DOM with src set, so this is instant)
+    wv.src = 'https://www.facebook.com';
   }
+
+  // Start loading Facebook immediately in the background
+  preloadFacebook();
 
   function fbReload() {
     const wv = document.getElementById('fb-webview');
@@ -760,8 +765,8 @@
     fbLoaded = false;
     wv.reload();
     wv.addEventListener('did-finish-load', () => {
-      loading.classList.add('hidden');
       fbLoaded = true;
+      loading.classList.add('hidden');
     }, { once: true });
   }
 
