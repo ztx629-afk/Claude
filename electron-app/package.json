@@ -1,0 +1,12 @@
+{
+  "name": "iphone-emulator",
+  "version": "1.0.0",
+  "description": "iPhone 15 Pro Emulator with real Facebook",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

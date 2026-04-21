@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>iPhone 15 Pro Emulator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(ellipse at 50% 30%, #2a2a4e 0%, #0d0d1a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── iPhone Shell ── */
+    .iphone-shell {
+      position: relative;
+      width: 390px;
+      height: 844px;
+      flex-shrink: 0;
+    }
+    .iphone-body {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(145deg, #2c2c2e, #1c1c1e);
+      border-radius: 54px;
+      box-shadow:
+        0 0 0 1px #48484a,
+        0 0 0 3px #1c1c1e,
+        0 40px 100px rgba(0,0,0,0.9),
+        inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .btn-silent  { position:absolute; left:-3px; top:120px; width:3px; height:32px; background:#3a3a3c; border-radius:3px; }
+    .btn-vol-up  { position:absolute; left:-3px; top:168px; width:3px; height:64px; background:#3a3a3c; border-radius:3px; }
+    .btn-vol-dn  { position:absolute; left:-3px; top:244px; width:3px; height:64px; background:#3a3a3c; border-radius:3px; }
+    .btn-power   { position:absolute; right:-3px; top:168px; width:3px; height:80px; background:#3a3a3c; border-radius:3px; }
+
+    /* ── Screen ── */
+    .screen {
+      position: absolute;
+      top: 6px; left: 6px; right: 6px; bottom: 6px;
+      border-radius: 49px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 14px; left: 50%;
+      transform: translateX(-50%);
+      width: 126px; height: 37px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 59px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 24px 10px;
+      z-index: 900;
+      pointer-events: none;
+    }
+    .status-time { font-size:17px; font-weight:600; color:white; letter-spacing:-0.3px; }
+    .status-icons { display:flex; align-items:center; gap:6px; }
+
+    /* ── Pages ── */
+    .page { position:absolute; inset:0; display:none; flex-direction:column; }
+    .page.active { display:flex; }
+
+    /* ── Lock Screen ── */
+    #lock-screen {
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+      align-items: center;
+      cursor: pointer;
+    }
+    .lock-time { margin-top:120px; font-size:80px; font-weight:200; color:white; letter-spacing:-4px; }
+    .lock-date { font-size:18px; color:rgba(255,255,255,.85); margin-top:8px; }
+    .lock-hint { position:absolute; bottom:52px; font-size:14px; color:rgba(255,255,255,.5); }
+
+    @keyframes unlock { from{transform:translateY(0);opacity:1} to{transform:translateY(-100%);opacity:0} }
+    .unlocking { animation: unlock .4s ease forwards; }
+
+    /* ── Home Screen ── */
+    #home-screen {
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+    .app-grid {
+      flex:1; padding:70px 20px 16px;
+      display:grid; grid-template-columns:repeat(4,1fr);
+      grid-auto-rows:100px; gap:16px 8px; align-content:start;
+    }
+    .app-icon { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; }
+    .app-icon:active .app-icon-img { transform:scale(.88); opacity:.85; }
+    .app-icon-img {
+      width:60px; height:60px; border-radius:15px;
+      display:flex; align-items:center; justify-content:center; font-size:30px;
+      box-shadow:0 4px 12px rgba(0,0,0,.4);
+      transition:transform .1s, opacity .1s;
+    }
+    .app-icon-label { font-size:11px; color:white; text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.5); }
+    .icon-wrap { position:relative; }
+    .notif-badge {
+      position:absolute; top:-4px; right:-4px;
+      background:red; color:white; font-size:10px; font-weight:700;
+      min-width:18px; height:18px; border-radius:9px;
+      display:flex; align-items:center; justify-content:center;
+      padding:0 4px; border:2px solid #1a1a2e;
+    }
+    .dock {
+      margin:0 16px 16px;
+      background:rgba(255,255,255,.15);
+      backdrop-filter:blur(20px);
+      border-radius:28px; padding:14px;
+      display:flex; justify-content:space-around;
+    }
+
+    /* ── App screens ── */
+    .app-page { background:#fff; }
+    .app-content { flex:1; overflow-y:auto; overflow-x:hidden; }
+
+    /* App open animation */
+    @keyframes app-open { from{opacity:0;transform:scale(.92)} to{opacity:1;transform:scale(1)} }
+    .page.app-page.active { animation:app-open .22s ease; }
+
+    /* ── Webview (real Facebook) ── */
+    #facebook-screen { background:#f0f2f5; flex-direction:column; }
+
+    .fb-topbar {
+      background: linear-gradient(90deg, #1877f2, #166fe5);
+      padding: 0 12px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      margin-top: 59px; /* below status bar */
+    }
+    .fb-topbar-left { display:flex; align-items:center; gap:10px; }
+    .fb-back-btn {
+      background: rgba(255,255,255,.2);
+      border: none; color: white;
+      font-size: 18px; cursor: pointer;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fb-topbar-title { color:white; font-size:17px; font-weight:600; }
+    .fb-topbar-right { display:flex; gap:8px; }
+    .fb-topbar-icon {
+      background: rgba(255,255,255,.2);
+      border: none; color: white; font-size:16px;
+      width:34px; height:34px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+    }
+
+    webview {
+      flex: 1;
+      width: 100%;
+      border: none;
+      display: flex;
+    }
+
+    .webview-loading {
+      position: absolute;
+      inset: 0;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+    }
+    .webview-loading.hidden { display: none; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid rgba(24,119,242,.2);
+      border-top-color: #1877f2;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 15px; color: #65676b; }
+
+    /* ── Settings ── */
+    #settings-screen { background:#f2f2f7; }
+    .settings-header { padding:60px 16px 12px; font-size:32px; font-weight:700; }
+    .settings-section { background:white; border-radius:12px; margin:0 16px 24px; overflow:hidden; }
+    .settings-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,.08); cursor:pointer; }
+    .settings-item:last-child { border-bottom:none; }
+    .settings-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+    .settings-label { flex:1; font-size:17px; }
+    .chevron { color:#c7c7cc; font-size:14px; }
+    .toggle-on { width:50px; height:28px; background:#34c759; border-radius:14px; display:flex; align-items:center; justify-content:flex-end; padding:3px; }
+    .toggle-on div { width:22px; height:22px; background:white; border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,.3); }
+
+    /* ── Messages ── */
+    .list-header { padding:60px 16px 12px; font-size:32px; font-weight:700; border-bottom:1px solid rgba(0,0,0,.1); }
+    .msg-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,.06); cursor:pointer; }
+    .msg-av { width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+
+    /* ── Calculator ── */
+    #calculator-screen { background:#000; }
+    .calc-display { padding:20px 24px; text-align:right; margin-top:60px; }
+    .calc-result { font-size:72px; font-weight:200; color:white; letter-spacing:-2px; line-height:1; }
+    .calc-buttons { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:0 16px 16px; }
+    .calc-btn { aspect-ratio:1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; cursor:pointer; transition:opacity .1s; }
+    .calc-btn:active { opacity:.6; }
+    .calc-btn.op { background:#ff9f0a; color:white; }
+    .calc-btn.fn { background:#a5a5a5; color:black; font-size:22px; }
+    .calc-btn.num { background:#333; color:white; }
+    .calc-btn.zero { border-radius:40px; aspect-ratio:auto; padding:0 28px; justify-content:flex-start; }
+
+    /* ── Camera ── */
+    #camera-screen { background:#000; }
+
+    /* ── Weather ── */
+    #weather-screen { background:linear-gradient(180deg,#5ab4e8,#87ceeb); }
+    .weather-main { padding:80px 24px 32px; text-align:center; color:white; }
+    .weather-city { font-size:32px; font-weight:300; }
+    .weather-temp { font-size:96px; font-weight:100; letter-spacing:-5px; }
+    .weather-card { background:rgba(255,255,255,.2); backdrop-filter:blur(10px); border-radius:16px; margin:0 16px; padding:16px; }
+    .hourly-row { display:flex; justify-content:space-around; }
+    .weather-hour { text-align:center; color:white; }
+
+    /* ── Photos ── */
+    .photos-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; }
+    .photo-thumb { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer; }
+
+    /* ── Music ── */
+    #music-screen { background:linear-gradient(135deg,#1a1a2e,#0f3460); }
+
+    /* ── Home indicator ── */
+    .home-indicator {
+      position:absolute; bottom:8px; left:50%;
+      transform:translateX(-50%);
+      width:134px; height:5px;
+      background:rgba(255,255,255,.35);
+      border-radius:3px; z-index:999; cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+<div class="iphone-shell">
+  <div class="iphone-body">
+    <div class="btn-silent"></div>
+    <div class="btn-vol-up"></div>
+    <div class="btn-vol-dn"></div>
+    <div class="btn-power"></div>
+  </div>
+
+  <div class="screen">
+    <div class="dynamic-island"></div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span class="status-time" id="status-time">9:41</span>
+      <div class="status-icons">
+        <svg width="17" height="12" fill="white" viewBox="0 0 17 12">
+          <rect x="0" y="6" width="3" height="6" rx="1"/>
+          <rect x="4" y="4" width="3" height="8" rx="1"/>
+          <rect x="8" y="2" width="3" height="10" rx="1"/>
+          <rect x="12" y="0" width="3" height="12" rx="1"/>
+        </svg>
+        <svg width="16" height="12" viewBox="0 0 16 12">
+          <circle cx="8" cy="10.5" r="1.5" fill="white"/>
+          <path d="M4.5 7C5.7 5.8 6.9 5 8 5s2.3.8 3.5 2" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M1.5 4C3.5 2 5.7 1 8 1s4.5 1 6.5 3" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <svg width="25" height="12" viewBox="0 0 25 12">
+          <rect x=".5" y=".5" width="21" height="11" rx="3" stroke="white" stroke-opacity=".4" fill="none"/>
+          <rect x="2" y="2" width="16" height="8" rx="2" fill="white"/>
+          <path d="M23 4v4a2 2 0 000-4z" fill="white" opacity=".4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── LOCK SCREEN ── -->
+    <div class="page active" id="lock-screen" onclick="unlockPhone()">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+        <div class="lock-time" id="lock-time">9:41</div>
+        <div class="lock-date" id="lock-date">Monday, April 21</div>
+      </div>
+      <div class="lock-hint">Tap to unlock</div>
+      <div style="height:60px;"></div>
+    </div>
+
+    <!-- ── HOME SCREEN ── -->
+    <div class="page" id="home-screen">
+      <div class="app-grid">
+        <div class="app-icon" onclick="openApp('messages')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#34c759,#30d158);">💬</div>
+          <span class="app-icon-label">Messages</span>
+        </div>
+        <div class="app-icon" onclick="openApp('phone')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#34c759,#30d158);">📞</div>
+          <span class="app-icon-label">Phone</span>
+        </div>
+        <div class="app-icon" onclick="openApp('safari')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#007aff,#00c2ff);">🧭</div>
+          <span class="app-icon-label">Safari</span>
+        </div>
+        <div class="app-icon" onclick="openApp('mail')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#007aff,#00c2ff);">✉️</div>
+          <span class="app-icon-label">Mail</span>
+        </div>
+        <div class="app-icon" onclick="openApp('photos')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#ff9f0a,#ff375f,#bf5af2);">🖼️</div>
+          <span class="app-icon-label">Photos</span>
+        </div>
+        <div class="app-icon" onclick="openApp('camera')">
+          <div class="app-icon-img" style="background:#1c1c1e;">📷</div>
+          <span class="app-icon-label">Camera</span>
+        </div>
+        <div class="app-icon" onclick="openApp('settings')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#8e8e93,#636366);">⚙️</div>
+          <span class="app-icon-label">Settings</span>
+        </div>
+        <div class="app-icon" onclick="openApp('clock')">
+          <div class="app-icon-img" style="background:#000;border:2px solid #222;">🕐</div>
+          <span class="app-icon-label">Clock</span>
+        </div>
+        <div class="app-icon" onclick="openApp('calculator')">
+          <div class="app-icon-img" style="background:#1c1c1e;">🔢</div>
+          <span class="app-icon-label">Calculator</span>
+        </div>
+        <div class="app-icon" onclick="openApp('weather')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#5ab4e8,#87ceeb);">⛅</div>
+          <span class="app-icon-label">Weather</span>
+        </div>
+        <div class="app-icon" onclick="openApp('maps')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#34c759,#007aff);">🗺️</div>
+          <span class="app-icon-label">Maps</span>
+        </div>
+        <div class="app-icon" onclick="openApp('music')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#ff2d55,#ff375f);">🎵</div>
+          <span class="app-icon-label">Music</span>
+        </div>
+        <div class="app-icon icon-wrap" onclick="openApp('facebook')">
+          <div class="app-icon-img" style="background:#1877f2;font-size:36px;font-weight:900;color:white;font-family:Georgia,serif;">f</div>
+          <span class="app-icon-label">Facebook</span>
+          <div class="notif-badge">3</div>
+        </div>
+        <div class="app-icon" onclick="openApp('instagram')">
+          <div class="app-icon-img" style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);">📸</div>
+          <span class="app-icon-label">Instagram</span>
+        </div>
+        <div class="app-icon" onclick="openApp('spotify')">
+          <div class="app-icon-img" style="background:#1db954;">🎧</div>
+          <span class="app-icon-label">Spotify</span>
+        </div>
+        <div class="app-icon" onclick="openApp('youtube')">
+          <div class="app-icon-img" style="background:#ff0000;">▶️</div>
+          <span class="app-icon-label">YouTube</span>
+        </div>
+      </div>
+
+      <div class="dock">
+        <div class="app-icon" onclick="openApp('phone')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#34c759,#30d158);">📞</div>
+        </div>
+        <div class="app-icon" onclick="openApp('messages')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#34c759,#30d158);">💬</div>
+        </div>
+        <div class="app-icon" onclick="openApp('safari')">
+          <div class="app-icon-img" style="background:linear-gradient(135deg,#007aff,#00c2ff);">🧭</div>
+        </div>
+        <div class="app-icon" onclick="openApp('facebook')">
+          <div class="app-icon-img" style="background:#1877f2;font-size:36px;font-weight:900;color:white;font-family:Georgia,serif;">f</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════
+         FACEBOOK — Real webview
+    ══════════════════════════════ -->
+    <div class="page app-page" id="facebook-screen" style="margin-top:0;">
+      <!-- Custom top bar (sits above webview) -->
+      <div class="fb-topbar">
+        <div class="fb-topbar-left">
+          <button class="fb-back-btn" onclick="goHome()">‹</button>
+          <span class="fb-topbar-title">Facebook</span>
+        </div>
+        <div class="fb-topbar-right">
+          <button class="fb-topbar-icon" onclick="fbReload()">↻</button>
+        </div>
+      </div>
+
+      <!-- Loading overlay -->
+      <div class="webview-loading" id="fb-loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Facebook…</div>
+      </div>
+
+      <!-- The real Facebook -->
+      <webview
+        id="fb-webview"
+        src="https://www.facebook.com"
+        useragent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        style="flex:1;width:100%;"
+        allowpopups
+      ></webview>
+    </div>
+
+    <!-- ══ MESSAGES ══ -->
+    <div class="page app-page" id="messages-screen">
+      <div class="app-content" style="background:white;">
+        <div class="list-header">Messages</div>
+        <div class="msg-item"><div class="msg-av" style="background:#34c759;">👩</div><div style="flex:1;"><div style="font-size:17px;font-weight:600;">Sarah Mitchell</div><div style="font-size:15px;color:#8e8e93;">Let me know what time 🙌</div></div><div style="font-size:13px;color:#8e8e93;">2m</div></div>
+        <div class="msg-item"><div class="msg-av" style="background:#ff9f0a;">🧑</div><div style="flex:1;"><div style="font-size:17px;font-weight:600;">James Carter</div><div style="font-size:15px;color:#8e8e93;">You should've come on the hike!</div></div><div style="font-size:13px;color:#8e8e93;">1h</div></div>
+        <div class="msg-item"><div class="msg-av" style="background:#007aff;">👧</div><div style="flex:1;"><div style="font-size:17px;font-weight:600;">Emily Davis</div><div style="font-size:15px;color:#8e8e93;">Can we reschedule to Thursday?</div></div><div style="font-size:13px;color:#8e8e93;">3h</div></div>
+        <div class="msg-item"><div class="msg-av" style="background:#845ef7;">🧔</div><div style="flex:1;"><div style="font-size:17px;font-weight:600;">Mike Thompson</div><div style="font-size:15px;color:#8e8e93;">Thanks so much!! 🙏</div></div><div style="font-size:13px;color:#8e8e93;">Yesterday</div></div>
+        <div class="msg-item"><div class="msg-av" style="background:#ff2d55;">👨‍👩‍👧</div><div style="flex:1;"><div style="font-size:17px;font-weight:600;">Family Group</div><div style="font-size:15px;color:#8e8e93;">Mum: Sunday roast at ours! 🍗</div></div><div style="font-size:13px;color:#8e8e93;">Mon</div></div>
+      </div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div class="page app-page" id="settings-screen">
+      <div class="app-content">
+        <div class="settings-header">Settings</div>
+        <div class="settings-section" style="margin-bottom:24px;">
+          <div class="settings-item" style="padding:16px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:#1877f2;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;">👤</div>
+            <div style="flex:1;"><div style="font-size:20px;font-weight:600;">Your Name</div><div style="font-size:13px;color:#8e8e93;">Apple ID, iCloud+</div></div>
+            <div class="chevron">›</div>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-item"><div class="settings-icon" style="background:#007aff;">✈️</div><div class="settings-label">Airplane Mode</div><div class="toggle-on"><div></div></div></div>
+          <div class="settings-item"><div class="settings-icon" style="background:#007aff;">📶</div><div class="settings-label">Wi-Fi</div><div style="font-size:14px;color:#8e8e93;margin-right:6px;">Home_5G</div><div class="chevron">›</div></div>
+          <div class="settings-item"><div class="settings-icon" style="background:#007aff;">🔵</div><div class="settings-label">Bluetooth</div><div style="font-size:14px;color:#8e8e93;margin-right:6px;">On</div><div class="chevron">›</div></div>
+        </div>
+        <div class="settings-section" style="margin-top:24px;">
+          <div class="settings-item"><div class="settings-icon" style="background:#ff9f0a;">🔔</div><div class="settings-label">Notifications</div><div class="chevron">›</div></div>
+          <div class="settings-item"><div class="settings-icon" style="background:#ff9f0a;">🔊</div><div class="settings-label">Sounds & Haptics</div><div class="chevron">›</div></div>
+          <div class="settings-item"><div class="settings-icon" style="background:#34c759;">⏱️</div><div class="settings-label">Screen Time</div><div class="chevron">›</div></div>
+        </div>
+        <div class="settings-section" style="margin-top:24px;">
+          <div class="settings-item"><div class="settings-icon" style="background:#8e8e93;">⚙️</div><div class="settings-label">General</div><div class="chevron">›</div></div>
+          <div class="settings-item"><div class="settings-icon" style="background:#007aff;">🔐</div><div class="settings-label">Privacy & Security</div><div class="chevron">›</div></div>
+        </div>
+        <div style="height:40px;"></div>
+      </div>
+    </div>
+
+    <!-- ══ CAMERA ══ -->
+    <div class="page app-page" id="camera-screen" style="background:#000;">
+      <div style="flex:1;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+        <div style="font-size:80px;">📷</div>
+        <div style="color:#555;font-size:15px;">Camera</div>
+      </div>
+      <div style="display:flex;gap:24px;padding:8px;justify-content:center;color:rgba(255,255,255,.6);font-size:13px;">
+        <span>PHOTO</span><span style="color:#ff9f0a;font-weight:600;">VIDEO</span><span>PORTRAIT</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-around;padding:16px 40px;">
+        <div style="width:52px;height:52px;border-radius:10px;background:#333;display:flex;align-items:center;justify-content:center;font-size:24px;">🖼️</div>
+        <div style="width:72px;height:72px;border-radius:50%;background:white;border:5px solid rgba(255,255,255,.5);cursor:pointer;"></div>
+        <div style="font-size:28px;color:white;">🔄</div>
+      </div>
+    </div>
+
+    <!-- ══ WEATHER ══ -->
+    <div class="page app-page" id="weather-screen">
+      <div class="app-content">
+        <div class="weather-main">
+          <div class="weather-city">London</div>
+          <div class="weather-temp">18°</div>
+          <div style="font-size:20px;font-weight:300;color:white;">Partly Cloudy</div>
+          <div style="font-size:18px;opacity:.9;color:white;margin-top:4px;">H:22°&nbsp; L:13°</div>
+        </div>
+        <div class="weather-card">
+          <div style="font-size:12px;color:rgba(255,255,255,.8);letter-spacing:.06em;border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:10px;margin-bottom:12px;">HOURLY FORECAST</div>
+          <div class="hourly-row">
+            <div class="weather-hour"><div style="font-size:13px;opacity:.8;margin-bottom:6px;">Now</div><div style="font-size:22px;margin-bottom:4px;">⛅</div><div style="font-size:17px;font-weight:500;">18°</div></div>
+            <div class="weather-hour"><div style="font-size:13px;opacity:.8;margin-bottom:6px;">1PM</div><div style="font-size:22px;margin-bottom:4px;">🌤️</div><div style="font-size:17px;font-weight:500;">20°</div></div>
+            <div class="weather-hour"><div style="font-size:13px;opacity:.8;margin-bottom:6px;">2PM</div><div style="font-size:22px;margin-bottom:4px;">☀️</div><div style="font-size:17px;font-weight:500;">22°</div></div>
+            <div class="weather-hour"><div style="font-size:13px;opacity:.8;margin-bottom:6px;">3PM</div><div style="font-size:22px;margin-bottom:4px;">🌤️</div><div style="font-size:17px;font-weight:500;">21°</div></div>
+            <div class="weather-hour"><div style="font-size:13px;opacity:.8;margin-bottom:6px;">4PM</div><div style="font-size:22px;margin-bottom:4px;">⛅</div><div style="font-size:17px;font-weight:500;">19°</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CALCULATOR ══ -->
+    <div class="page app-page" id="calculator-screen">
+      <div class="calc-display"><div class="calc-result" id="calc-display">0</div></div>
+      <div class="calc-buttons">
+        <div class="calc-btn fn" onclick="calcFn('AC')">AC</div>
+        <div class="calc-btn fn" onclick="calcFn('+/-')">+/-</div>
+        <div class="calc-btn fn" onclick="calcFn('%')">%</div>
+        <div class="calc-btn op" onclick="calcOp('/')">÷</div>
+        <div class="calc-btn num" onclick="calcNum('7')">7</div>
+        <div class="calc-btn num" onclick="calcNum('8')">8</div>
+        <div class="calc-btn num" onclick="calcNum('9')">9</div>
+        <div class="calc-btn op" onclick="calcOp('*')">×</div>
+        <div class="calc-btn num" onclick="calcNum('4')">4</div>
+        <div class="calc-btn num" onclick="calcNum('5')">5</div>
+        <div class="calc-btn num" onclick="calcNum('6')">6</div>
+        <div class="calc-btn op" onclick="calcOp('-')">−</div>
+        <div class="calc-btn num" onclick="calcNum('1')">1</div>
+        <div class="calc-btn num" onclick="calcNum('2')">2</div>
+        <div class="calc-btn num" onclick="calcNum('3')">3</div>
+        <div class="calc-btn op" onclick="calcOp('+')">+</div>
+        <div class="calc-btn num zero" onclick="calcNum('0')">0</div>
+        <div class="calc-btn num" onclick="calcNum('.')">.</div>
+        <div class="calc-btn op" onclick="calcEquals()">=</div>
+      </div>
+    </div>
+
+    <!-- ══ PHOTOS ══ -->
+    <div class="page app-page" id="photos-screen">
+      <div class="app-content">
+        <div style="padding:60px 16px 12px;font-size:32px;font-weight:700;">Photos</div>
+        <div class="photos-grid">
+          <div class="photo-thumb" style="background:#a8e6cf;">🏔️</div>
+          <div class="photo-thumb" style="background:#ffb347;">🌅</div>
+          <div class="photo-thumb" style="background:#87ceeb;">🌊</div>
+          <div class="photo-thumb" style="background:#dda0dd;">🌸</div>
+          <div class="photo-thumb" style="background:#f0e68c;">🌻</div>
+          <div class="photo-thumb" style="background:#98fb98;">🌿</div>
+          <div class="photo-thumb" style="background:#ffc0cb;">🎂</div>
+          <div class="photo-thumb" style="background:#b0c4de;">🏙️</div>
+          <div class="photo-thumb" style="background:#ffe4b5;">🐕</div>
+          <div class="photo-thumb" style="background:#c8a2c8;">🦋</div>
+          <div class="photo-thumb" style="background:#add8e6;">🚢</div>
+          <div class="photo-thumb" style="background:#f4a460;">🍂</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CLOCK ══ -->
+    <div class="page app-page" id="clock-screen" style="background:#000;">
+      <div class="app-content" style="display:flex;flex-direction:column;align-items:center;padding:80px 24px 24px;">
+        <div style="font-size:80px;font-weight:100;color:white;letter-spacing:-4px;" id="clock-display">9:41</div>
+        <div style="font-size:18px;color:rgba(255,255,255,.6);margin-top:4px;">Monday, April 21</div>
+        <div style="margin-top:32px;width:100%;background:#1c1c1e;border-radius:12px;overflow:hidden;">
+          <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:12px;color:#8e8e93;">ALARM</div><div style="font-size:28px;color:white;font-weight:200;">7:00 AM</div><div style="font-size:13px;color:#8e8e93;">Weekdays</div></div>
+            <div class="toggle-on"><div></div></div>
+          </div>
+          <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <div><div style="font-size:12px;color:#8e8e93;">ALARM</div><div style="font-size:28px;color:rgba(255,255,255,.4);font-weight:200;">8:30 AM</div><div style="font-size:13px;color:#8e8e93;">Weekends</div></div>
+            <div style="width:50px;height:28px;background:#3a3a3c;border-radius:14px;display:flex;padding:3px;"><div style="width:22px;height:22px;background:#8e8e93;border-radius:50%;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PHONE ══ -->
+    <div class="page app-page" id="phone-screen" style="background:#f2f2f7;">
+      <div class="app-content">
+        <div style="padding:60px 16px 16px;font-size:32px;font-weight:700;">Phone</div>
+        <div style="text-align:center;font-size:26px;font-weight:200;min-height:44px;padding:0 16px;" id="phone-number"></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:16px 40px;text-align:center;">
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('1')"><span style="font-size:30px;">1</span></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('2')"><span style="font-size:30px;">2</span><div style="font-size:10px;color:#8e8e93;">ABC</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('3')"><span style="font-size:30px;">3</span><div style="font-size:10px;color:#8e8e93;">DEF</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('4')"><span style="font-size:30px;">4</span><div style="font-size:10px;color:#8e8e93;">GHI</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('5')"><span style="font-size:30px;">5</span><div style="font-size:10px;color:#8e8e93;">JKL</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('6')"><span style="font-size:30px;">6</span><div style="font-size:10px;color:#8e8e93;">MNO</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('7')"><span style="font-size:30px;">7</span><div style="font-size:10px;color:#8e8e93;">PQRS</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('8')"><span style="font-size:30px;">8</span><div style="font-size:10px;color:#8e8e93;">TUV</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('9')"><span style="font-size:30px;">9</span><div style="font-size:10px;color:#8e8e93;">WXYZ</div></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('*')"><span style="font-size:24px;">*</span></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('0')"><span style="font-size:30px;">0</span></div>
+          <div style="padding:14px;cursor:pointer;" onclick="phoneKey('#')"><span style="font-size:24px;">#</span></div>
+        </div>
+        <div style="display:flex;justify-content:center;align-items:center;gap:48px;padding:0 40px 20px;">
+          <div style="width:28px;"></div>
+          <div style="width:72px;height:72px;background:#34c759;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;cursor:pointer;" onclick="makeCall()">📞</div>
+          <div style="font-size:22px;cursor:pointer;" onclick="phoneDelete()">⌫</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SAFARI ══ -->
+    <div class="page app-page" id="safari-screen" style="background:#f2f2f7;">
+      <div style="padding:60px 16px 12px;">
+        <div style="background:rgba(0,0,0,.06);border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:10px;">
+          <span>🔒</span><span style="font-size:16px;color:#3c3c43;flex:1;">google.com</span>
+        </div>
+      </div>
+      <div style="flex:1;background:white;margin:0 16px;border-radius:12px;padding:32px 20px;display:flex;flex-direction:column;align-items:center;">
+        <div style="font-size:56px;margin-bottom:12px;">🌐</div>
+        <div style="font-size:20px;font-weight:600;margin-bottom:6px;">Safari</div>
+        <div style="font-size:14px;color:#8e8e93;">Browse the web</div>
+      </div>
+    </div>
+
+    <!-- ══ MAIL ══ -->
+    <div class="page app-page" id="mail-screen" style="background:white;">
+      <div class="app-content">
+        <div class="list-header">Inbox</div>
+        <div class="msg-item"><div class="msg-av" style="background:#1877f2;border-radius:8px;">📧</div><div style="flex:1;"><div style="font-weight:700;">Apple</div><div style="font-size:15px;color:#000;font-weight:600;">Your receipt from Apple</div><div style="font-size:14px;color:#8e8e93;">Thank you for your purchase...</div></div><div style="font-size:13px;color:#8e8e93;">11:32</div></div>
+        <div class="msg-item"><div class="msg-av" style="background:#1db954;border-radius:8px;">📧</div><div style="flex:1;"><div style="font-weight:700;">Spotify</div><div style="font-size:15px;color:#000;">Your Weekly Mix 🎵</div><div style="font-size:14px;color:#8e8e93;">Based on your listening...</div></div><div style="font-size:13px;color:#8e8e93;">9:14</div></div>
+      </div>
+    </div>
+
+    <!-- ══ MAPS ══ -->
+    <div class="page app-page" id="maps-screen" style="background:#e8f0e9;">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+        <div style="font-size:80px;">🗺️</div>
+        <div style="font-size:22px;font-weight:600;margin-top:16px;">Maps</div>
+        <div style="font-size:15px;color:#8e8e93;margin-top:6px;">London, UK</div>
+        <div style="background:white;border-radius:12px;padding:16px;margin-top:24px;width:100%;">
+          <div style="font-size:13px;color:#65676b;font-weight:600;margin-bottom:10px;">NEARBY</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div>☕ Costa Coffee · 0.2 mi</div>
+            <div>🍕 Pizza Express · 0.4 mi</div>
+            <div>🏥 St. Thomas Hospital · 0.7 mi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MUSIC ══ -->
+    <div class="page app-page" id="music-screen" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:80px 24px 24px;">
+        <div style="width:200px;height:200px;background:linear-gradient(135deg,#ff2d55,#bf5af2);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:80px;box-shadow:0 20px 60px rgba(0,0,0,.5);">🎵</div>
+        <div style="margin-top:24px;text-align:center;color:white;">
+          <div style="font-size:22px;font-weight:700;">Blinding Lights</div>
+          <div style="font-size:17px;color:rgba(255,255,255,.7);margin-top:4px;">The Weeknd</div>
+        </div>
+        <div style="margin-top:24px;width:100%;">
+          <div style="height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin-bottom:8px;"><div style="height:100%;width:45%;background:white;border-radius:2px;"></div></div>
+          <div style="display:flex;justify-content:space-between;color:rgba(255,255,255,.6);font-size:13px;"><span>1:47</span><span>3:52</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:32px;margin-top:24px;">
+          <div style="font-size:28px;cursor:pointer;color:white;">⏮️</div>
+          <div style="width:64px;height:64px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;">⏸️</div>
+          <div style="font-size:28px;cursor:pointer;color:white;">⏭️</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INSTAGRAM ══ -->
+    <div class="page app-page" id="instagram-screen" style="background:white;">
+      <div style="padding:12px 16px;border-bottom:1px solid #e4e6eb;display:flex;justify-content:space-between;align-items:center;margin-top:50px;">
+        <div style="font-size:22px;font-weight:700;font-style:italic;">Instagram</div>
+        <div style="font-size:24px;">💬</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:12px 16px;">
+        <div style="width:100%;height:260px;background:linear-gradient(135deg,#a8e6cf,#3d9970);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:80px;">🏔️</div>
+        <div style="display:flex;gap:16px;margin-top:12px;font-size:24px;">❤️ 💬 ↗️</div>
+        <div style="font-size:14px;margin-top:8px;"><strong>james_carter</strong> Amazing hike! 🏔️ #nature</div>
+      </div>
+    </div>
+
+    <!-- ══ SPOTIFY ══ -->
+    <div class="page app-page" id="spotify-screen" style="background:#121212;">
+      <div style="flex:1;overflow-y:auto;padding:60px 16px 20px;">
+        <div style="color:white;font-size:26px;font-weight:700;margin-bottom:20px;">Good afternoon</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;">
+          <div style="background:#282828;border-radius:4px;display:flex;align-items:center;gap:10px;overflow:hidden;"><div style="width:52px;height:52px;background:#1db954;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎵</div><div style="color:white;font-size:13px;font-weight:600;">Liked Songs</div></div>
+          <div style="background:#282828;border-radius:4px;display:flex;align-items:center;gap:10px;overflow:hidden;"><div style="width:52px;height:52px;background:#ff2d55;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🔥</div><div style="color:white;font-size:13px;font-weight:600;">Top Hits 2024</div></div>
+        </div>
+        <div style="color:white;font-size:20px;font-weight:700;margin-bottom:16px;">Recently Played</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;gap:12px;"><div style="width:48px;height:48px;background:linear-gradient(135deg,#ff2d55,#bf5af2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:24px;">🎵</div><div><div style="color:white;font-size:15px;font-weight:600;">Blinding Lights</div><div style="color:#b3b3b3;font-size:13px;">The Weeknd</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ YOUTUBE ══ -->
+    <div class="page app-page" id="youtube-screen" style="background:#fff;">
+      <div style="padding:12px 16px;border-bottom:1px solid #e5e5e5;display:flex;justify-content:space-between;align-items:center;margin-top:50px;">
+        <div style="font-size:20px;font-weight:700;color:#ff0000;">▶ YouTube</div>
+        <div style="font-size:20px;">🔍</div>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:12px;">
+        <div style="width:100%;height:180px;background:linear-gradient(135deg,#1a1a2e,#0f3460);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:60px;margin-bottom:8px;">▶️</div>
+        <div style="font-size:15px;font-weight:600;">10 Coding Projects That Will Get You Hired</div>
+        <div style="font-size:13px;color:#606060;margin-top:4px;">Fireship · 2.4M views · 2 days ago</div>
+      </div>
+    </div>
+
+    <!-- Home Indicator -->
+    <div class="home-indicator" onclick="goHome()"></div>
+  </div>
+</div>
+
+<script>
+  // ── Clock ──
+  function updateTime() {
+    const now = new Date();
+    const t = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('status-time').textContent = t;
+    document.getElementById('lock-time').textContent = t;
+    document.getElementById('clock-display').textContent = t;
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('lock-date').textContent = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate();
+  }
+  updateTime();
+  setInterval(updateTime, 15000);
+
+  // ── Navigation ──
+  let currentScreen = 'lock-screen';
+  let fbLoaded = false;
+
+  function showScreen(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    currentScreen = id;
+  }
+
+  function unlockPhone() {
+    const lock = document.getElementById('lock-screen');
+    lock.classList.add('unlocking');
+    setTimeout(() => { showScreen('home-screen'); lock.classList.remove('unlocking'); }, 400);
+  }
+
+  function openApp(app) {
+    showScreen(app + '-screen');
+    if (app === 'facebook') initFacebook();
+  }
+
+  function goHome() {
+    if (currentScreen !== 'home-screen' && currentScreen !== 'lock-screen') showScreen('home-screen');
+  }
+
+  // ── Facebook webview ──
+  function initFacebook() {
+    const wv = document.getElementById('fb-webview');
+    const loading = document.getElementById('fb-loading');
+
+    if (!fbLoaded) {
+      loading.classList.remove('hidden');
+      wv.addEventListener('did-finish-load', () => {
+        loading.classList.add('hidden');
+        fbLoaded = true;
+      }, { once: true });
+      wv.addEventListener('did-fail-load', () => {
+        loading.innerHTML = '<div style="font-size:40px;">📵</div><div style="font-size:15px;color:#65676b;">Could not connect.<br>Check your internet.</div>';
+      }, { once: true });
+    } else {
+      loading.classList.add('hidden');
+    }
+  }
+
+  function fbReload() {
+    const wv = document.getElementById('fb-webview');
+    const loading = document.getElementById('fb-loading');
+    loading.innerHTML = '<div class="spinner"></div><div class="loading-text">Loading Facebook…</div>';
+    loading.classList.remove('hidden');
+    fbLoaded = false;
+    wv.reload();
+    wv.addEventListener('did-finish-load', () => {
+      loading.classList.add('hidden');
+      fbLoaded = true;
+    }, { once: true });
+  }
+
+  // ── Calculator ──
+  let cs = { d:'0', prev:null, op:null, reset:false };
+  function _uc() { document.getElementById('calc-display').textContent = cs.d; }
+  function calcNum(n) {
+    if (n==='.' && cs.d.includes('.')) return;
+    if (cs.reset || cs.d==='0') { cs.d = n==='.'?'0.':n; cs.reset=false; }
+    else if (cs.d.length < 9) cs.d += n;
+    _uc();
+  }
+  function calcOp(op) { cs.prev=parseFloat(cs.d); cs.op=op; cs.reset=true; }
+  function calcEquals() {
+    if (!cs.op || cs.prev===null) return;
+    const c=parseFloat(cs.d);
+    let r;
+    if(cs.op==='+') r=cs.prev+c; else if(cs.op==='-') r=cs.prev-c;
+    else if(cs.op==='*') r=cs.prev*c; else r=c!==0?cs.prev/c:'Error';
+    cs.d=typeof r==='number'?(Number.isInteger(r)?r.toString():parseFloat(r.toFixed(8)).toString()):r;
+    cs.prev=null; cs.op=null; cs.reset=true; _uc();
+  }
+  function calcFn(fn) {
+    if(fn==='AC'){cs={d:'0',prev:null,op:null,reset:false};_uc();}
+    else if(fn==='+/-'){cs.d=String(-parseFloat(cs.d));_uc();}
+    else if(fn==='%'){cs.d=String(parseFloat(cs.d)/100);_uc();}
+  }
+
+  // ── Phone ──
+  let phoneNum='';
+  function phoneKey(k){phoneNum+=k;document.getElementById('phone-number').textContent=phoneNum;}
+  function phoneDelete(){phoneNum=phoneNum.slice(0,-1);document.getElementById('phone-number').textContent=phoneNum;}
+  function makeCall(){if(phoneNum){alert('Calling '+phoneNum+'…');phoneNum='';document.getElementById('phone-number').textContent='';}}
+</script>
+</body>
+</html>
