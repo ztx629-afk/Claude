@@ -385,36 +385,8 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════
-         FACEBOOK — Real webview
-    ══════════════════════════════ -->
-    <div class="page app-page" id="facebook-screen" style="margin-top:0;">
-      <!-- Custom top bar (sits above webview) -->
-      <div class="fb-topbar">
-        <div class="fb-topbar-left">
-          <button class="fb-back-btn" onclick="goHome()">‹</button>
-          <span class="fb-topbar-title">Facebook</span>
-        </div>
-        <div class="fb-topbar-right">
-          <button class="fb-topbar-icon" onclick="fbReload()">↻</button>
-        </div>
-      </div>
-
-      <!-- Loading overlay -->
-      <div class="webview-loading" id="fb-loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Loading Facebook…</div>
-      </div>
-
-      <!-- The real Facebook -->
-      <webview
-        id="fb-webview"
-        src="https://www.facebook.com"
-        useragent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
-        style="flex:1;width:100%;"
-        allowpopups
-      ></webview>
-    </div>
+    <!-- Facebook screen placeholder (the real webview lives outside .screen below) -->
+    <div class="page app-page" id="facebook-screen" style="background:#f0f2f5;"></div>
 
     <!-- ══ MESSAGES ══ -->
     <div class="page app-page" id="messages-screen">
@@ -691,6 +663,44 @@
     <!-- Home Indicator -->
     <div class="home-indicator" onclick="goHome()"></div>
   </div>
+
+  <!--
+    FACEBOOK OVERLAY — sits outside .screen so the webview is ALWAYS
+    rendered in the DOM (never inside a display:none parent).
+    This is the fix for the webview not loading.
+  -->
+  <div id="fb-overlay" style="
+    display: none;
+    position: absolute;
+    top: 6px; left: 6px; right: 6px; bottom: 6px;
+    border-radius: 49px;
+    overflow: hidden;
+    flex-direction: column;
+    z-index: 800;
+    background: #f0f2f5;
+  ">
+    <div class="fb-topbar">
+      <div class="fb-topbar-left">
+        <button class="fb-back-btn" onclick="goHome()">‹</button>
+        <span class="fb-topbar-title">Facebook</span>
+      </div>
+      <div class="fb-topbar-right">
+        <button class="fb-topbar-icon" onclick="fbReload()">↻</button>
+      </div>
+    </div>
+    <div class="webview-loading" id="fb-loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Loading Facebook…</div>
+    </div>
+    <webview
+      id="fb-webview"
+      src="https://www.facebook.com"
+      useragent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+      partition="persist:facebook"
+      style="flex:1; width:100%; min-height:0;"
+      allowpopups
+    ></webview>
+  </div>
 </div>
 
 <script>
@@ -710,11 +720,11 @@
 
   // ── Navigation ──
   let currentScreen = 'lock-screen';
-  let fbLoaded = false;
 
   function showScreen(id) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    document.getElementById('fb-overlay').style.display = 'none';
     currentScreen = id;
   }
 
@@ -725,49 +735,38 @@
   }
 
   function openApp(app) {
-    showScreen(app + '-screen');
-    if (app === 'facebook' && fbLoaded) {
-      document.getElementById('fb-loading').classList.add('hidden');
+    if (app === 'facebook') {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('fb-overlay').style.display = 'flex';
+      currentScreen = 'facebook-screen';
+    } else {
+      showScreen(app + '-screen');
     }
   }
 
   function goHome() {
-    if (currentScreen !== 'home-screen' && currentScreen !== 'lock-screen') showScreen('home-screen');
+    document.getElementById('fb-overlay').style.display = 'none';
+    showScreen('home-screen');
   }
 
-  // ── Facebook webview — preload immediately on app start ──
-  function preloadFacebook() {
-    const wv = document.getElementById('fb-webview');
-    const loading = document.getElementById('fb-loading');
-    wv.addEventListener('did-finish-load', () => {
-      fbLoaded = true;
-      // If already on Facebook screen, hide the spinner right away
-      if (currentScreen === 'facebook-screen') loading.classList.add('hidden');
-    }, { once: true });
-    wv.addEventListener('did-fail-load', () => {
-      fbLoaded = false;
-      if (currentScreen === 'facebook-screen') {
-        loading.innerHTML = '<div style="font-size:40px;">📵</div><div style="font-size:15px;color:#65676b;">Could not connect.<br>Check your internet.</div>';
-      }
-    }, { once: true });
-    // Trigger load by setting src (webview is already in DOM with src set, so this is instant)
-    wv.src = 'https://www.facebook.com';
-  }
+  // ── Facebook webview — attach events once, no double src set ──
+  const fbWv = document.getElementById('fb-webview');
+  const fbLoading = document.getElementById('fb-loading');
 
-  // Start loading Facebook immediately in the background
-  preloadFacebook();
+  fbWv.addEventListener('did-finish-load', () => {
+    fbLoading.classList.add('hidden');
+  });
+
+  fbWv.addEventListener('did-fail-load', (e) => {
+    if (e.errorCode !== -3) {
+      fbLoading.innerHTML = '<div style="font-size:40px;margin-bottom:12px;">📵</div><div style="font-size:15px;color:#65676b;text-align:center;">Could not load Facebook.<br>Check your internet.</div>';
+    }
+  });
 
   function fbReload() {
-    const wv = document.getElementById('fb-webview');
-    const loading = document.getElementById('fb-loading');
-    loading.innerHTML = '<div class="spinner"></div><div class="loading-text">Loading Facebook…</div>';
-    loading.classList.remove('hidden');
-    fbLoaded = false;
-    wv.reload();
-    wv.addEventListener('did-finish-load', () => {
-      fbLoaded = true;
-      loading.classList.add('hidden');
-    }, { once: true });
+    fbLoading.innerHTML = '<div class="spinner"></div><div class="loading-text">Loading Facebook…</div>';
+    fbLoading.classList.remove('hidden');
+    fbWv.reload();
   }
 
   // ── Calculator ──

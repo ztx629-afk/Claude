@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 
 function createWindow() {
@@ -14,6 +14,16 @@ function createWindow() {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js')
     }
+  });
+
+  // Grant all permissions so the webview can load Facebook without being blocked
+  win.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(true);
+  });
+
+  // Allow Facebook's partition session the same permissions
+  session.fromPartition('persist:facebook').setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(true);
   });
 
   win.loadFile('index.html');
